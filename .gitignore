@@ -1,0 +1,185 @@
+# =============================================================
+# GeoChange AI — .gitignore
+# Python + React/Node + Geospatial + ML + IDE
+# =============================================================
+
+# ─── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+*.dll
+*.egg
+*.egg-info/
+dist/
+build/
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+pip-wheel-metadata/
+*.whl
+
+# ─── Virtual Environments ─────────────────────────────────────
+.venv/
+venv/
+backend/.venv/
+backend/venv/
+
+# ─── Environment Variables & Secrets ──────────────────────────
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# ─── Google Earth Engine credentials ──────────────────────────
+# GEE stores tokens in user home — never commit these
+credentials.json
+service_account_key.json
+gee_credentials.json
+~/.config/earthengine/
+
+# ─── Satellite Data (large binary files) ─────────────────────
+# Ignore directory contents but keep the placeholder .gitkeep files
+ml/data/raw/*
+!ml/data/raw/.gitkeep
+ml/data/processed/*
+!ml/data/processed/.gitkeep
+ml/data/labels/*
+!ml/data/labels/.gitkeep
+*.tif
+*.tiff
+*.geotiff
+*.img
+*.nc
+*.h5
+*.hdf5
+*.jp2
+*.ecw
+
+# ─── Model Artifacts ─────────────────────────────────────────
+# Ignore artifact contents but keep placeholders
+artifacts/models/*
+!artifacts/models/.gitkeep
+artifacts/exports/*
+!artifacts/exports/.gitkeep
+artifacts/mlruns/
+*.pkl
+*.pickle
+*.joblib
+*.pt
+*.pth
+*.onnx
+*.bin
+*.model
+*.xgb
+
+# ─── MLflow & Experiment Tracking ────────────────────────────
+ml/notebooks/.ipynb_checkpoints/
+mlruns/
+ml/mlruns/
+artifacts/mlruns/
+mlflow.db
+
+# ─── Jupyter Notebooks (checkpoints) ─────────────────────────
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ─── SQLite Database ─────────────────────────────────────────
+# We commit the schema but not the database file itself
+*.db
+*.sqlite
+*.sqlite3
+!backend/app/db/schema.sql
+
+# ─── Node.js / React / Vite ──────────────────────────────────
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+.npm
+*.lock
+!package-lock.json
+!yarn.lock
+
+# ─── Logs ────────────────────────────────────────────────────
+*.log
+logs/
+backend/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── OS-generated files ──────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─── IDE / Editor ────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.kiro/
+!.kiro/steering/
+!.kiro/hooks/
+
+# ─── Docker ──────────────────────────────────────────────────
+# Keep Dockerfiles and compose in Git; exclude generated volumes
+docker/volumes/
+.docker/
+
+# ─── Test artifacts ──────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+
+# ─── Cache & Temp ────────────────────────────────────────────
+.cache/
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+
+# ─── Export outputs ──────────────────────────────────────────
+artifacts/exports/*
+!artifacts/exports/.gitkeep
+exports/
+*.zip
+*.tar.gz
+
+# ─── Configs with secrets ────────────────────────────────────
+configs/secrets.yaml
+configs/*.secret.yaml
+
+# ─── Keep these placeholder files in Git ─────────────────────
+# (Exceptions are now inline with each ignored directory above)
+
+# ─── Setup / Install debug outputs (never commit) ────────────
+# These are created by pip/batch during environment setup
+install_*.bat
+install_*.txt
+verify_*.py
+verify_*.txt
+*_install_*.txt
+pip_list_output.txt
+pydantic_versions.txt
+pydantic_err.txt
+_core_reqs.txt

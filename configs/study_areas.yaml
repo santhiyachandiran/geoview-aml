@@ -1,0 +1,49 @@
+# GeoChange AI — Supported Study Areas
+# Each entry defines a named area of interest with a bounding box in EPSG:4326.
+# bbox: [west, south, east, north]
+
+study_areas:
+
+  coimbatore:
+    name: "Coimbatore, Tamil Nadu, India"
+    bbox: [76.8, 10.9, 77.2, 11.1]
+    crs: "EPSG:4326"
+    description: >
+      Primary study area. Rapid urban expansion from IT corridor growth
+      visible between 2018 and 2024. Surrounded by agricultural land,
+      Nilgiri foothills, and Siruvani watershed.
+    default_comparison:
+      year_1: 2018
+      year_2: 2024
+    seasonal_window:
+      start_month: 11   # November — post-monsoon dry season
+      end_month: 2      # February
+
+  chennai:
+    name: "Chennai, Tamil Nadu, India"
+    bbox: [80.1, 12.9, 80.4, 13.2]
+    crs: "EPSG:4326"
+    description: >
+      Coastal metropolitan region. Useful for peri-urban growth
+      and wetland change analysis.
+    default_comparison:
+      year_1: 2018
+      year_2: 2024
+    seasonal_window:
+      start_month: 11
+      end_month: 2
+
+  bengaluru:
+    name: "Bengaluru Urban, Karnataka, India"
+    bbox: [77.4, 12.8, 77.8, 13.1]
+    crs: "EPSG:4326"
+    description: >
+      One of the fastest urbanising areas in South Asia.
+      Extensive agricultural-to-built-up transition visible
+      in the Sentinel-2 archive.
+    default_comparison:
+      year_1: 2018
+      year_2: 2024
+    seasonal_window:
+      start_month: 11
+      end_month: 2
