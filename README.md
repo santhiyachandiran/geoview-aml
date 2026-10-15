@@ -1,257 +1,191 @@
-# GeoChange AI
-### AI-Powered Satellite Imagery Land-Cover Change Detection
+# GEOVIEW AML — AI-Powered Satellite Imagery Land-Cover Change Detection
 
-> **Academic project** — Integrated M.Sc. AI & ML  
-> Study area: Coimbatore, Tamil Nadu, India
-
----
-
-## What this project does
-
-GeoChange AI compares satellite observations from different years and detects where and how much land-cover has changed. The primary use case is **detecting agricultural land loss due to urban expansion** — for example, cropland being converted into built-up area around Coimbatore's IT corridor between 2018 and 2024.
-
-The system answers:
-- How has a selected area changed between two years?
-- Where has agricultural or vegetated land changed into built-up land?
-- How much area changed (in hectares and km²)?
-- Which locations experienced the largest changes?
-- How confident is the model in its predictions?
-- What is the actual acquisition date of the satellite imagery?
+> **Course / Evaluation:** Advanced Machine Learning (AML)  
+> **Study Area:** Coimbatore, Tamil Nadu, India (`[76.8°E, 10.9°N, 77.2°E, 11.1°N]`)  
+> **Repository:** [https://github.com/santhiyachandiran/geoview-aml](https://github.com/santhiyachandiran/geoview-aml)
 
 ---
 
-## Status
+## 1. Project Objective & Architecture
 
-| Component | Status |
-|---|---|
-| Project structure | ✅ Complete |
-| Python environment (3.14.2) | ✅ All 27 packages installed |
-| FastAPI backend skeleton | ✅ Running — health endpoint tested |
-| SQLite database schema | ✅ Initialized and tested |
-| Automated tests (26 tests) | ✅ 26/26 passing |
-| Google Earth Engine access | ⚠️ **Not yet configured** — see setup below |
-| Satellite data ingestion | 🔲 Phase 3 |
-| ML models (RF, XGBoost) | 🔲 Phase 4 & 5 |
-| React frontend | 🔲 Phase 8 |
-| Docker | 🔲 Phase 10 |
-| Cloud deployment | 🔲 Phase 11 |
+GEOVIEW AML is an end-to-end geospatial machine learning platform designed to detect and quantify land-cover changes across multi-temporal satellite observations. The system focuses on **urban expansion and agricultural/vegetation dynamics** around the Coimbatore metropolitan and industrial corridor between 2018 and 2024.
 
----
-
-## Architecture
+### System Architecture
 
 ```
-Browser (React + Vite + Leaflet)
-        │
-        │ HTTP REST
-        ▼
-FastAPI Backend  ──────►  Google Earth Engine  (Sentinel-2, Landsat)
-        │                  ESA WorldCover       (land-cover labels)
-        │
-        ├── SQLite DB       (analysis history, metadata)
-        ├── ML Inference    (Random Forest / XGBoost models)
-        └── Artifact Store  (trained models, exported maps)
+User Interface (React 18 + Vite + Leaflet + Recharts)
+                       │  HTTP REST (/api/v1)
+                       ▼
+FastAPI Backend (Python 3.14 + Uvicorn)
+  ├── Data Access Layer: Google Earth Engine (Sentinel-2 Harmonized L2A)
+  ├── Ground Reference: ESA WorldCover 10m v200 (2021)
+  ├── Feature Engineering: 6 Spectral Bands + NDVI, NDWI, NDBI (10m)
+  ├── ML Inference Engine: Random Forest & Optuna-Tuned XGBoost
+  ├── Relational Storage: SQLite (geochange.db — study areas, analysis logs)
+  └── Artifact Store: Trained models, scalers, confusion matrices, GeoJSON exports
 ```
 
 ---
 
-## Technology Stack
+## 2. Dataset Sources & Preprocessing Pipeline
 
-**Frontend:** React 18, Vite, JavaScript, Leaflet, Recharts  
-**Backend:** Python 3.14, FastAPI, Uvicorn, Pydantic v2, SQLAlchemy  
-**ML:** scikit-learn, XGBoost, Optuna, MLflow, SHAP  
-**Geospatial:** Rasterio, GeoPandas, Shapely, PyProj  
-**Data source:** Google Earth Engine (Sentinel-2, Landsat, ESA WorldCover)  
-**Database:** SQLite  
-**Container:** Docker + Docker Compose  
+| Layer | Source / Collection | Resolution | Temporal Window | Role |
+|---|---|---|---|---|
+| **Satellite Imagery** | `COPERNICUS/S2_SR_HARMONIZED` | 10 m | 2017–2025 (Nov–Mar dry season) | Multispectral surface reflectance |
+| **Cloud Masking** | Sentinel-2 Scene Classification Layer (SCL) | 10 m | Per-scene | Masks cloud shadows (3), clouds (8, 9), cirrus (10), snow (11) |
+| **Reference Labels** | ESA WorldCover v200 | 10 m | 2021 | 4 aggregated classes: Built-up, Vegetation, Water, Bare soil |
+| **Real Sampled Dataset** | 10,000 spatial points (`ml/data/processed/coimbatore_2021/`) | 10 m | Dry Season 2021–2022 | Modular feature vectors (`X.npy`, `y.npy`, `rows.npy`, `cols.npy`) |
 
----
-
-## Project Structure
-
-```
-geochange-ai/
-├── frontend/               React + Vite app (Phase 8)
-├── backend/
-│   ├── app/
-│   │   ├── api/v1/         FastAPI route handlers
-│   │   ├── core/           Config, logging
-│   │   ├── db/             SQLite schema and init
-│   │   ├── models/         Pydantic schemas
-│   │   └── services/       Business logic
-│   ├── requirements.txt    Pinned Python dependencies
-│   └── geochange.db        SQLite database (gitignored)
-├── ml/
-│   ├── data/               Downloaded satellite data (gitignored)
-│   ├── preprocessing/      Cloud masking, compositing, indices
-│   ├── features/           Feature engineering
-│   ├── models/             RF, XGBoost training code
-│   ├── evaluation/         Metrics, change detection
-│   └── notebooks/          EDA notebooks
-├── tests/                  pytest test suite
-├── configs/                Study area and model configs
-├── scripts/                Data download, training runners
-├── artifacts/              Saved models, exports (gitignored)
-├── docs/                   Architecture, API docs
-├── .env.example            Environment variable template
-├── .gitignore
-└── README.md
-```
+### Feature Engineering & Preprocessing
+- **Spectral Bands:** Blue (`B2`), Green (`B3`), Red (`B4`), Near-Infrared (`B8`), SWIR-1 (`B11`), SWIR-2 (`B12`).
+- **Derived Spectral Indices:**
+  - **NDVI** (Normalized Difference Vegetation Index): `(B8 - B4) / (B8 + B4)` — vegetation health and density.
+  - **NDWI** (Normalized Difference Water Index): `(B3 - B11) / (B3 + B11)` — surface water and moisture.
+  - **NDBI** (Normalized Difference Built-up Index): `(B11 - B8) / (B11 + B8)` — urban surfaces and impervious cover.
+- **Leakage Prevention:**
+  - **Spatial Block Partitioning:** 4×4 spatial block splitting (`spatial_block_split`) allocates whole geographic grid tiles to train (70%), validation (15%), and test (15%), preventing adjacent pixel autocorrelation leakage.
+  - **Pre-fit Standardization:** `StandardScaler` fitted strictly on training partition and applied to validation/test partitions.
+- **Scientific Integrity Caveat:** ESA WorldCover labels are from 2021. In multi-year comparisons, classifying composites for 2018 or 2024 introduces temporal label mismatch. All results explicitly communicate this distinction between real satellite reflectance, reference labels, and model predictions.
 
 ---
 
-## Local Setup
+## 3. Actual Machine Learning Experiment Results
+
+Models were trained and evaluated on 10,000 real Sentinel-2 satellite pixels for Coimbatore using a 4×4 spatial block split (Test set: $N=1,876$). Class imbalance ($72.3\%$ vegetation, $26.2\%$ built-up, $0.9\%$ bare, $0.6\%$ water) was accounted for via `class_weight="balanced"` and macro-averaged metrics.
+
+| Metric | Random Forest (Balanced) | XGBoost (Optuna Tuned) | Evaluation Winner |
+|---|---|---|---|
+| **Overall Test Accuracy** | 86.14% | **87.26%** | XGBoost |
+| **Balanced Accuracy** | **58.10%** | 54.63% | Random Forest |
+| **Macro-Averaged F1** | **0.5536** | 0.5481 | Random Forest |
+| **ROC-AUC (OVR)** | 0.8755 | **0.9509** | XGBoost |
+| **Built-up F1-Score** | **0.7783** (Precision: 0.753, Recall: 0.805) | 0.7764 (Precision: 0.803, Recall: 0.751) | Random Forest |
+| **Vegetation F1-Score** | 0.9071 (Precision: 0.920, Recall: 0.894) | **0.9161** (Precision: 0.899, Recall: 0.934) | XGBoost |
+| **Water F1-Score** | 0.4000 (Precision: 0.333, Recall: 0.500) | **0.5000** (Precision: 0.500, Recall: 0.500) | XGBoost |
+| **Bare Soil F1-Score** | **0.1290** (Precision: 0.133, Recall: 0.125) | 0.0000 (Precision: 0.000, Recall: 0.000) | Random Forest |
+
+### Saved Artifacts (`artifacts/models/`)
+- `rf_20261014T204814.joblib`: Random Forest model weights ($n=200, \text{depth}=20$)
+- `xgb_20261014T204814.joblib`: XGBoost model weights ($n=337, \text{depth}=3, \text{lr}=0.079$)
+- `scaler.joblib`: Fitted `StandardScaler`
+- `results_20261014T204814.json`: Complete metrics, confusion matrices, and Optuna hyperparameters
+- High-resolution evaluation plots: `rf_confusion_matrix_*.png`, `rf_feature_importance_*.png`, `xgb_confusion_matrix_*.png`, `xgb_feature_importance_*.png`, `spectral_signatures_*.png`
+
+---
+
+## 4. Interactive Web Application & Visualizations
+
+The application provides **6 distinct, interactive visualizations** with verified units:
+1. **Before & After Satellite Imagery Map:** Side-by-side synchronized Leaflet maps displaying satellite views for Year 1 vs Year 2, with study area boundaries and change hotspot indicators.
+2. **Land-Cover Area by Class (Hectares / km²):** Recharts bar chart comparing total surface area per class across comparison years.
+3. **Net Area Gained or Lost (Hectares):** Horizontal/vertical delta chart showing net hectares gained (positive) or lost (negative) per class.
+4. **Land-Cover Transition Matrix:** Interactive heat-mapped matrix displaying exact pixel counts, hectares ($1\text{ pixel} = 100\text{ m}^2 = 0.01\text{ ha}$), and percentages from initial to final class.
+5. **Spectral-Index Signal Comparison:** Side-by-side and delta comparison of NDVI, NDWI, and NDBI with simple layman explanations.
+6. **Satellite Imagery Availability Timeline:** Bar and line timeline of cloud-filtered Sentinel-2 scenes per dry season (2017–2025).
+
+---
+
+## 5. How to Run Locally
 
 ### Prerequisites
-- Python 3.14+ ([python.org](https://python.org))
-- Node.js 20+ ([nodejs.org](https://nodejs.org))
-- Docker Desktop ([docker.com](https://docker.com))
+- Python 3.11+ (Python 3.14 verified)
+- Node.js 18+ (Node.js 20+ recommended)
 - Git
 
-### 1. Clone and create virtual environment
-
+### 1. Environment Setup
 ```powershell
-git clone https://github.com/<your-username>/geochange-ai.git
-cd geochange-ai
-
-# Create virtual environment
+# In project root: D:\AML CAT PRO\geochange-ai
 python -m venv .venv
-
-# Activate (Windows PowerShell)
-.venv\Scripts\Activate.ps1
-
-# Activate (macOS / Linux)
-source .venv/bin/activate
-```
-
-### 2. Install backend dependencies
-
-```powershell
+.venv\Scripts\activate
 pip install -r backend/requirements.txt
 ```
 
-### 3. Configure environment variables
-
+### 2. Google Earth Engine Configuration
 ```powershell
-# Copy the template
-Copy-Item .env.example .env
+# Authenticate your Google Cloud / GEE account:
+earthengine authenticate
 
-# Edit .env and fill in:
-# - GEE_PROJECT_ID (after GEE account approval)
-# - GEE_AUTH_MODE=user
+# Ensure .env contains:
+GEE_PROJECT_ID=sincere-baton-478517-m2
+GEE_AUTH_MODE=user
 ```
 
-### 4. Initialize the database
-
+### 3. Initialize Database & Run Backend
 ```powershell
 cd backend
 python -m app.db.init_db
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+- API Health Check: `http://127.0.0.1:8000/api/v1/health`
+- Swagger Interactive Documentation: `http://127.0.0.1:8000/docs`
+
+### 4. Run Frontend Development Server
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+- Frontend Web App: `http://127.0.0.1:5173/`
+
+### 5. Run Automated Tests
+```powershell
+# From project root:
+pytest tests/ -v
+# Verified: 223 / 223 tests passing
 ```
 
-### 5. Start the backend server
-
+### 6. Production Build
 ```powershell
-cd backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-API docs available at: http://localhost:8000/docs
-
-### 6. Run tests
-
-```powershell
-# From project root
-.venv\Scripts\pytest tests/ -v
+cd frontend
+npm run build
+# Verified: dist/index.html + bundled assets created cleanly
 ```
 
 ---
 
-## Google Earth Engine Setup
+## 6. Docker & Containerized Execution
 
-> ⚠️ **GEE access is NOT yet verified in this project.**  
-> The application will start and the health endpoint will report `unconfigured` for GEE.  
-> Satellite data ingestion (Phase 3) requires a confirmed GEE account.
-
-### Steps to get access:
-
-1. Go to [https://earthengine.google.com](https://earthengine.google.com)
-2. Click **Sign Up** and use your university email for faster academic approval
-3. Wait for approval (typically 1–3 days for academic users)
-4. After approval, run in your activated venv:
-   ```powershell
-   earthengine authenticate
-   ```
-5. Create or select a Google Cloud project at [https://console.cloud.google.com](https://console.cloud.google.com)
-6. Enable the Earth Engine API for your project
-7. Add to your `.env`:
-   ```
-   GEE_PROJECT_ID=your-cloud-project-id
-   GEE_AUTH_MODE=user
-   ```
-
-**Credentials are never committed to Git** — `.env` is in `.gitignore`.
-
----
-
-## Planned Docker Workflow (Phase 10)
+The application is fully containerized using Docker Compose v2:
 
 ```powershell
+# Validate compose configuration:
+docker compose config
+
+# Build containers:
 docker compose build
+
+# Run multi-container stack:
 docker compose up -d
+
+# Verify services:
 docker compose ps
-docker compose logs -f
-docker compose down
+# Frontend: http://localhost:3000
+# Backend:  http://localhost:8000/api/v1/health
 ```
 
----
-
-## Data Sources
-
-| Source | Use | Notes |
-|---|---|---|
-| Sentinel-2 SR (`COPERNICUS/S2_SR_HARMONIZED`) | Primary imagery | 10 m, 2017–present |
-| Landsat 8/9 (`LANDSAT/LC08/C02/T1_L2`) | Historical backup | 30 m, pre-2017 |
-| ESA WorldCover v2 (2021) | Training labels | 10 m, 11 classes |
-| Dynamic World | Per-pixel probabilities | 10 m, per-scene |
-
-**Seasonal window:** November–February composites (Tamil Nadu post-monsoon dry season)  
-**Study area bbox:** `[76.8°E, 10.9°N, 77.2°E, 11.1°N]` (Coimbatore)
+### Headless GEE Authentication in Containers
+For Docker containers or headless cloud servers (where interactive browser OAuth cannot run), use a Google Cloud Service Account:
+1. Create a service account with Earth Engine Viewer/Resource permissions.
+2. Download the JSON key to `configs/gee_service_account_key.json` (gitignored).
+3. Set `GEE_SERVICE_ACCOUNT_EMAIL` and `GEE_SERVICE_ACCOUNT_KEY_PATH` in `.env`.
+4. Alternatively, mount host credentials: `-v ~/.config/earthengine:/root/.config/earthengine:ro`.
 
 ---
 
-## Land-Cover Classes
+## 7. Deployment Status & Platform Readiness
 
-| Class | Colour | ESA WorldCover codes |
-|---|---|---|
-| Built-up / Urban | `#FF3366` | 50 |
-| Vegetation / Agriculture | `#10B981` | 10, 20, 30, 40 |
-| Water | `#00E5FF` | 80 |
-| Bare soil / Other | `#F59E0B` | 60, 70, 90, 95, 100 |
-
----
-
-## Limitations
-
-- ESA WorldCover labels only available for 2020 and 2021. The classifier is trained on 2021 labels and applied to multi-year composites — this is documented and standard practice.
-- Sentinel-2 archive starts from 2017. Pre-2017 comparisons use Landsat (30 m resolution, different spectral characteristics).
-- Cloud cover over Tamil Nadu is high from June–October. We use November–February composites to mitigate this.
-- GEE free tier has export quotas; very large areas may need to be tiled.
-- This project does not claim real-time or live imagery — all data is historical satellite observations.
+- **Source Control:** GitHub remote verified at `https://github.com/santhiyachandiran/geoview-aml.git`.
+- **Live Hosted URL:** *Not yet publicly hosted.* In accordance with assignment restrictions, cloud deployment will not be triggered without explicit approval.
+- **Deployment Preparation:**
+  - Supported Platforms: Render, Hugging Face Spaces (Docker SDK), Google Cloud Run.
+  - Required Environment Variables: `GEE_PROJECT_ID`, `APP_ENV=production`, `CORS_ALLOWED_ORIGINS`, `SQLITE_DB_PATH`.
+  - Health check endpoint configured: `GET /api/v1/health`.
 
 ---
 
-## Academic Rubric Coverage
+## 8. Limitations & Known Boundaries
 
-| Criterion | Marks | Planned evidence |
-|---|---|---|
-| Data engineering & visualization | 8 | GEE pipeline, preprocessing, 5+ charts |
-| Advanced modeling & pipeline | 10 | RF baseline, XGBoost + Optuna, MLflow tracking |
-| Benchmarking | 10 | Fair RF vs XGBoost comparison, spatial CV, SHAP |
-| Deployment & containerization | 8 | Docker Compose, cloud deployment |
-| Documentation | 4 | README, API docs, methodology section |
-
----
-
-## License
-
-MIT — see `LICENSE` file (to be added).
+1. **Model Performance Page:** Temporarily postponed per user direction; standalone evaluation charts and results are served via `/api/v1/models/results/latest` and `/api/v1/models/plots`.
+2. **Temporal Label Mismatch:** ESA WorldCover reference labels exist only for 2020/2021. Classification of other temporal composites represents model prediction, not verified in-situ ground truth.
+3. **Cloud Contamination:** Monsoon months (June–October) in Tamil Nadu have high cloud cover; analysis is restricted to post-monsoon dry season (November–March).
+4. **Spatial Resolution:** Sentinel-2 pixels are 10 m × 10 m ($100\text{ m}^2$). Sub-pixel structures (narrow roads, small buildings) are mixed pixels.

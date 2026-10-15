@@ -1,0 +1,25 @@
+# Project-root .dockerignore (used when context = project root)
+.venv/
+.git/
+.agents/
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.db
+*.sqlite
+frontend/node_modules/
+frontend/dist/
+ml/data/raw/
+ml/data/processed/
+ml/data/labels/
+artifacts/mlruns/
+artifacts/exports/
+logs/
+*.log
+.pytest_cache/
+tests/
+docs/
+scripts/
+configs/
+*.md

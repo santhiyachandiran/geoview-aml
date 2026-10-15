@@ -1,0 +1,32 @@
+# Docker-only requirements — excludes shap (pulls torch/CUDA, 300+ MB).
+# SHAP visualisations are generated on the host via run_pipeline.py only.
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+pydantic==2.14.1
+pydantic-settings==2.15.0
+python-multipart==0.0.32
+starlette==1.7.0
+sqlalchemy==2.1.4
+aiosqlite==0.22.1
+rasterio==1.5.2
+geopandas==1.2.0
+shapely==2.2.0
+pyproj==3.8.0
+pyogrio==0.13.0
+affine==3.0.1
+earthengine-api==1.7.47
+scikit-learn==1.9.1
+xgboost==3.4.1
+optuna==5.0.0
+mlflow==3.17.0
+numpy==2.5.4
+pandas==3.0.6
+scipy==1.18.1
+matplotlib==3.11.2
+seaborn==0.13.2
+anyio==4.15.1
+httpx==0.28.1
+python-dotenv==1.2.4
+loguru==0.7.3
+tenacity==9.2.1
+joblib==1.6.0

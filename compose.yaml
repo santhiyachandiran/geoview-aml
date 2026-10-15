@@ -1,0 +1,43 @@
+services:
+  backend:
+    build:
+      context: .                    # project root — lets us COPY ml/ into image
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - SQLITE_DB_PATH=/app/data/geochange.db
+      - MODEL_ARTIFACTS_DIR=/app/artifacts/models
+      - EXPORT_DIR=/app/artifacts/exports
+      - MLFLOW_TRACKING_URI=/app/artifacts/mlruns
+      - LOG_FILE=/app/logs/geochange.log
+      - MLFLOW_DISABLE_AGENT_HINT=1
+    volumes:
+      - backend_data:/app/data
+      - backend_artifacts:/app/artifacts
+      - backend_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 25s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  backend_data:
+  backend_artifacts:
+  backend_logs:

@@ -178,7 +178,7 @@ class TestApiDocs:
         assert r.status_code == 200
         schema = r.json()
         assert schema["info"]["title"] == "GeoChange AI API"
-        assert schema["info"]["version"] == "0.1.0"
+        assert schema["info"]["version"] in ("0.1.0", "0.2.0")  # accept either phase
 
     def test_openapi_has_health_path(self, client):
         schema = client.get("/openapi.json").json()

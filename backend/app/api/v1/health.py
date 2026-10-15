@@ -7,7 +7,6 @@ GET /api/v1/status  — detailed component status (GEE, DB, models)
 
 import sqlite3
 from datetime import datetime, timezone
-from pathlib import Path
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -38,14 +37,14 @@ class HealthResponse(BaseModel):
 
 
 def _check_database() -> ComponentStatus:
-    """Try opening and querying the SQLite database."""
-    db_path = Path(settings.sqlite_db_path)
+    """Try opening and querying the SQLite database using the centralised resolved path."""
+    db_path = settings.resolved_db_path
     try:
         if not db_path.exists():
             return ComponentStatus(
                 name="database",
                 status="unavailable",
-                detail=f"Database file not found at {db_path}. Run db init.",
+                detail=f"Database file not found at {db_path}. Run: python -m app.db.init_db",
             )
         conn = sqlite3.connect(str(db_path), timeout=3)
         conn.execute("SELECT COUNT(*) FROM study_areas")
@@ -94,19 +93,8 @@ def _check_gee() -> ComponentStatus:
 
 
 def _check_model_artifacts() -> ComponentStatus:
-    """
-    Check whether the model artifacts directory exists.
-    Resolves relative paths from the project root (parent of backend/).
-    """
-    raw = settings.model_artifacts_dir
-    if Path(raw).is_absolute():
-        artifacts_path = Path(raw)
-    else:
-        # __file__ = backend/app/api/v1/health.py  → parents[3] = backend/  → parents[4] = project root
-        project_root = Path(__file__).resolve().parents[4]
-        # Strip leading ./ or / so Path division works correctly
-        clean = raw.lstrip("./").lstrip("/")
-        artifacts_path = project_root / clean
+    """Check whether the model artifacts directory exists using the centralised resolved path."""
+    artifacts_path = settings.resolved_artifacts_dir
     if not artifacts_path.exists():
         return ComponentStatus(
             name="model_artifacts",

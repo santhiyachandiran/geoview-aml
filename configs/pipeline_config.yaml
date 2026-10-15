@@ -1,0 +1,76 @@
+# GEOVIEW AML — Pipeline Configuration
+# Passed to run_pipeline.py via config or directly as CLI args.
+# Edit this file to change training defaults.
+
+study_area:
+  name: Coimbatore
+  bbox: [76.8, 10.9, 77.2, 11.1]   # [west, south, east, north] EPSG:4326
+
+data:
+  composite_year: 2021          # Must match WorldCover label year (2020 or 2021)
+  season_start_month: 11        # November — post-monsoon, low cloud cover
+  season_end_month:   3         # February
+  max_cloud_pct:      20        # Maximum CLOUDY_PIXEL_PERCENTAGE per scene
+  scale_m:            10        # Sentinel-2 spatial resolution
+  max_pixels:         500000    # Max pixels to sample from GEE (memory constraint)
+  seed:               42
+
+  change_comparison:
+    year1: 2018                 # Earlier period (T1): Nov 2018–Feb 2019
+    year2: 2024                 # Later period  (T2): Nov 2024–Feb 2025
+
+  worldcover:
+    collection: "ESA/WorldCover/v200"
+    year: 2021
+    citation: >
+      Zanaga et al. (2022). ESA WorldCover 10 m 2021 v200.
+      Zenodo. https://doi.org/10.5281/zenodo.7254221
+    license: "CC BY 4.0"
+    temporal_caveat: >
+      WorldCover labels are from 2021. Classifying 2018 or 2024 composites
+      with these labels introduces temporal label mismatch — a documented
+      limitation that must appear in any published results.
+
+split:
+  strategy: spatial_block      # Uses pixel row/col coordinates from GEE
+  n_blocks:  4                 # Grid tiles per axis (total = n_blocks^2 = 16)
+  train_frac: 0.70
+  val_frac:   0.15
+  test_frac:  0.15
+  seed:       42
+
+random_forest:
+  n_estimators:      200
+  max_depth:         20
+  min_samples_split: 5
+  min_samples_leaf:  2
+  class_weight:      balanced
+  random_state:      42
+
+xgboost_optuna:
+  n_trials:    30
+  timeout_sec: 600
+  seed:        42
+  search_space:
+    n_estimators:     [100, 500]
+    max_depth:        [3,   8]
+    learning_rate:    [0.01, 0.3]   # log scale
+    subsample:        [0.6,  1.0]
+    colsample_bytree: [0.6,  1.0]
+    reg_alpha:        [0.0,  1.0]
+    reg_lambda:       [1.0,  10.0]
+
+classes:
+  0: built_up
+  1: vegetation
+  2: water
+  3: bare
+
+features:
+  spectral_bands: [B2, B3, B4, B8, B11, B12]
+  indices:        [NDVI, NDWI, NDBI]
+  total:          9
+
+mlflow:
+  experiment_name: geochange_ai
+  tracking_uri: ./artifacts/mlruns

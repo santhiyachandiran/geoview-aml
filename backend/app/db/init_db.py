@@ -23,16 +23,16 @@ def init_database(db_path: str | None = None) -> Path:
     Create the SQLite database and run the schema if it doesn't exist.
 
     Args:
-        db_path: Path to the .db file. Defaults to settings.sqlite_db_path.
+        db_path: Explicit path to the .db file.
+                 Defaults to settings.resolved_db_path (always absolute).
 
     Returns:
         The resolved path to the database file.
-
-    Raises:
-        FileNotFoundError: If schema.sql is not found.
-        sqlite3.Error: If the schema cannot be applied.
     """
-    resolved = Path(db_path or settings.sqlite_db_path).resolve()
+    if db_path is not None:
+        resolved = Path(db_path).resolve()
+    else:
+        resolved = settings.resolved_db_path
     resolved.parent.mkdir(parents=True, exist_ok=True)
 
     if not SCHEMA_FILE.exists():
@@ -57,10 +57,13 @@ def verify_database(db_path: str | None = None) -> dict:
     """
     Check the database exists and all expected tables are present.
 
-    Returns:
-        dict with keys: path, exists, tables (list), study_area_count (int).
+    Args:
+        db_path: Explicit path. Defaults to settings.resolved_db_path.
     """
-    resolved = Path(db_path or settings.sqlite_db_path).resolve()
+    if db_path is not None:
+        resolved = Path(db_path).resolve()
+    else:
+        resolved = settings.resolved_db_path
     expected_tables = {
         "study_areas",
         "analyses",
